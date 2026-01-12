@@ -1,4 +1,7 @@
 package com.example.livetv.Data.Model
 
-class Channel {
-}
+data class Channel(
+    val name: String,
+    val url: String,
+    val group: String?
+)
