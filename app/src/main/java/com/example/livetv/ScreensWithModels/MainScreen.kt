@@ -1,7 +1,10 @@
 package com.example.livetv.ScreensWithModels
 
+
 import android.app.Activity
 import android.content.pm.ActivityInfo
+
+import android.widget.Toast
 import androidx.annotation.OptIn
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -53,12 +56,9 @@ fun MainScreen(
 
     val filteredChannels = remember(searchQuery, channels) {
         if (searchQuery.isBlank()) channels
-        else channels.filter {
-            it.name.contains(searchQuery, ignoreCase = true)
-        }
+        else channels.filter { it.name.contains(searchQuery, ignoreCase = true) }
     }
 
-    // 🔹 ExoPlayer
     val player = remember {
         val httpFactory = DefaultHttpDataSource.Factory()
             .setUserAgent("Mozilla/5.0")
@@ -69,64 +69,108 @@ fun MainScreen(
             .build()
     }
 
-    // 🔹 Orientation control
     val activity = context as Activity
+    val window = activity.window
+    val view = activity.window.decorView
+
+    // Handle Orientation & System Bars
     DisposableEffect(isFullscreen) {
-        activity.requestedOrientation =
-            if (isFullscreen)
-                ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
-            else
-                ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+        val windowInsetsController = androidx.core.view.WindowCompat.getInsetsController(window, view)
+
+        if (isFullscreen) {
+            activity.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
+            windowInsetsController.hide(androidx.core.view.WindowInsetsCompat.Type.systemBars())
+        } else {
+            activity.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+            windowInsetsController.show(androidx.core.view.WindowInsetsCompat.Type.systemBars())
+        }
 
         onDispose {
-            activity.requestedOrientation =
-                ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+            activity.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+            windowInsetsController.show(androidx.core.view.WindowInsetsCompat.Type.systemBars())
         }
     }
 
-    // 🔹 Player listener
+    // Player Listener
     DisposableEffect(player) {
         val listener = object : androidx.media3.common.Player.Listener {
             override fun onPlaybackStateChanged(state: Int) {
-                isLoading =
-                    state == androidx.media3.common.Player.STATE_BUFFERING
+                isLoading = state == androidx.media3.common.Player.STATE_BUFFERING
             }
-            // catching the broken links
-
+            override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
+                isLoading = false
+                Toast.makeText(context, "Stream Offline", Toast.LENGTH_SHORT).show()
+            }
         }
-
         player.addListener(listener)
-
         onDispose {
             player.removeListener(listener)
             player.release()
         }
     }
 
-    Column(modifier = Modifier.fillMaxSize()) {
+    // ROOT BOX: Critical for Fullscreen
+    Box(modifier = Modifier.fillMaxSize().background(Color.Black)) {
 
-        /* ================= PLAYER ================= */
+        // 1. CONTENT LAYER (Search + List) - Hidden if Fullscreen
+        if (!isFullscreen) {
+            Column(modifier = Modifier.fillMaxSize().background(Color.White)) {
+                // Placeholder space where the player usually sits
+                Box(modifier = Modifier.fillMaxWidth().height(250.dp))
 
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .then(
-                    if (isFullscreen) Modifier.fillMaxHeight()
-                    else Modifier.height(250.dp)
+                androidx.compose.material3.OutlinedTextField(
+                    value = searchQuery,
+                    onValueChange = { searchQuery = it },
+                    modifier = Modifier.fillMaxWidth().padding(12.dp),
+                    placeholder = { Text("Search sports channels") },
+                    singleLine = true
                 )
-        ) {
 
+                LazyColumn(modifier = Modifier.fillMaxWidth().weight(1f)) {
+                    items(filteredChannels) { channel ->
+                        Text(
+                            text = channel.name,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    isLoading = true
+                                    player.setMediaItem(MediaItem.fromUri(channel.url))
+                                    player.prepare()
+                                    player.play()
+                                }
+                                .padding(16.dp)
+                        )
+                    }
+                }
+            }
+        }
+
+        // 2. PLAYER LAYER - Stays on top
+        Box(
+            modifier = if (isFullscreen) {
+                Modifier.fillMaxSize().background(Color.Black)
+            } else {
+                Modifier.padding(top = 0.dp).fillMaxWidth().height(250.dp)
+            },
+            contentAlignment = Alignment.Center
+        ) {
             AndroidView(
                 factory = { ctx ->
                     PlayerView(ctx).apply {
                         this.player = player
-                        keepScreenOn = true
-                        useController = true
+                        this.keepScreenOn = true
+                        this.useController = true
+                        this.resizeMode = androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_FIT
                     }
                 },
                 modifier = Modifier.fillMaxSize()
             )
 
+            if (isLoading) {
+                androidx.compose.material3.CircularProgressIndicator(color = Color.Green)
+            }
+
+            // Fullscreen Toggle Button
             Text(
                 text = if (isFullscreen) "EXIT" else "FULL",
                 modifier = Modifier
@@ -137,47 +181,6 @@ fun MainScreen(
                     .padding(horizontal = 10.dp, vertical = 6.dp),
                 color = Color.White
             )
-        }
-
-        /* ================= SEARCH ================= */
-
-        if (!isFullscreen) {
-            androidx.compose.material3.OutlinedTextField(
-                value = searchQuery,
-                onValueChange = { searchQuery = it },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(12.dp),
-                placeholder = { Text("Search sports channels") },
-                singleLine = true
-            )
-        }
-
-        /* ================= CHANNEL LIST ================= */
-
-        if (!isFullscreen) {
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f)
-            ) {
-                items(filteredChannels) { channel ->
-                    Text(
-                        text = channel.name,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable {
-                                isLoading = true
-                                player.setMediaItem(
-                                    MediaItem.fromUri(channel.url)
-                                )
-                                player.prepare()
-                                player.play()
-                            }
-                            .padding(16.dp)
-                    )
-                }
-            }
         }
     }
 }
