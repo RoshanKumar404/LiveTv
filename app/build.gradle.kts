@@ -72,6 +72,6 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:$lifecycle_version")
     // Coroutines - For background parsing of the channel list
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
-    // Coil - Highly recommended for loading sports channel logos
+    // Coil - for loading sports channel logos
     implementation("io.coil-kt:coil-compose:2.6.0")
 }

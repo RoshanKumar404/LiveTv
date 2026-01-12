@@ -13,6 +13,7 @@ class MainviewModel: ViewModel() {
     private  val repo= RepoLink()
     private  val _channels= MutableStateFlow<List<Channel>>(emptyList())
     val channels= _channels.asStateFlow()
+
     init {
         viewModelScope.launch {
             try {
@@ -23,5 +24,6 @@ class MainviewModel: ViewModel() {
             }
         }
     }
+
 
 }
