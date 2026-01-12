@@ -56,4 +56,22 @@ dependencies {
     androidTestImplementation(libs.androidx.ui.test.junit4)
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
+
+    // video player
+    val media3_version = "1.5.1"
+    implementation("androidx.media3:media3-exoplayer:$media3_version")
+    implementation("androidx.media3:media3-ui:$media3_version")
+    implementation("androidx.media3:media3-exoplayer-hls:$media3_version") // CRITICAL for IPTV
+
+    // Networking
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
+    val lifecycle_version = "2.8.7"
+    // viewmodel
+    implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:$lifecycle_version")
+    implementation("androidx.lifecycle:lifecycle-runtime-ktx:$lifecycle_version")
+    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:$lifecycle_version")
+    // Coroutines - For background parsing of the channel list
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
+    // Coil - Highly recommended for loading sports channel logos
+    implementation("io.coil-kt:coil-compose:2.6.0")
 }
