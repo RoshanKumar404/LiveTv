@@ -8,12 +8,18 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.ModifierLocalBeyondBoundsLayout
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -25,6 +31,7 @@ import androidx.media3.datasource.DefaultHttpDataSource
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.ui.PlayerView
+import java.nio.file.WatchEvent
 
 
 @OptIn(UnstableApi::class)
@@ -34,6 +41,14 @@ fun MainScreen(
 ) {
     val context = LocalContext.current
     val channels by viewModel.channels.collectAsStateWithLifecycle()
+    var search by remember{ mutableStateOf("") }
+    val filterChannels= remember(search,channels){
+       if (search.isEmpty()){
+           channels
+       }else{
+           channels.filter { it.name.contains(search, ignoreCase = true) }
+       }
+    }
 
     // FIX: Wrap the player in remember so it isn't recreated on every scroll/touch
     var player = remember {
@@ -52,7 +67,7 @@ fun MainScreen(
 
     Column(modifier = Modifier.fillMaxWidth()) {
 
-        // 🎥 Player (fixed at top)
+        // player area
         AndroidView(
             factory = { ctx ->
                 PlayerView(ctx).apply {
@@ -64,6 +79,19 @@ fun MainScreen(
                 .fillMaxWidth()
                 .height(250.dp)
         )
+        //code for search bar
+        androidx.compose.material3.OutlinedTextField(
+            value = search,
+            onValueChange = {search=it},
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 8.dp),
+            placeholder = {Text("Search your channel..")},
+            singleLine = true,
+            leadingIcon = {
+                Icon(Icons.Default.Search, contentDescription = null,modifier = Modifier.padding(start = 8.dp))
+            }
+        )
 
         // 📜 Channel list (scrolls independently)
         LazyColumn(
@@ -71,7 +99,7 @@ fun MainScreen(
                 .fillMaxWidth()
                 .weight(1f)   // ⭐ THIS IS THE KEY FIX
         ) {
-            items(channels) { channel ->
+            items(filterChannels) { channel ->
                 Text(
                     text = channel.name,
                     modifier = Modifier
