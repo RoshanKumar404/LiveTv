@@ -49,7 +49,7 @@ fun MainScreen(
 ) {
     val context = LocalContext.current
     val channels by viewModel.channels.collectAsStateWithLifecycle()
-
+//this too
     var isFullscreen by remember { mutableStateOf(false) }
     var searchQuery by remember { mutableStateOf("") }
     var isLoading by remember { mutableStateOf(false) }
@@ -76,7 +76,7 @@ fun MainScreen(
     // Handle Orientation & System Bars
     DisposableEffect(isFullscreen) {
         val windowInsetsController = androidx.core.view.WindowCompat.getInsetsController(window, view)
-
+// the full screen thing  is not working*********************
         if (isFullscreen) {
             activity.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
             windowInsetsController.hide(androidx.core.view.WindowInsetsCompat.Type.systemBars())
@@ -125,7 +125,7 @@ fun MainScreen(
                     placeholder = { Text("Search sports channels") },
                     singleLine = true
                 )
-
+// here we have to do some changes**********************************
                 LazyColumn(modifier = Modifier.fillMaxWidth().weight(1f)) {
                     items(filteredChannels) { channel ->
                         Text(
