@@ -10,7 +10,7 @@ import okhttp3.Request
 
 class RepoLink {
     private val client = OkHttpClient()
-    private val TAG = "IPTV_REPO"
+    private val TAG = "LiveLink_REPO"
 
     suspend fun fetchSportsChannels(): List<Channel> = withContext(Dispatchers.IO) {
         try {
@@ -29,6 +29,10 @@ class RepoLink {
                 val sportsChannels = allChannels.filter {
                     it.group?.lowercase()?.contains("sport") == true ||
                             it.name?.lowercase()?.contains("sport") == true
+                }
+                val EnterTainmentChannels = allChannels.filter {
+                    it.group?.lowercase()?.contains("Entertainment") == true ||
+                            it.name?.lowercase()?.contains("entertainment") == true
                 }
 
 //                Log.d(TAG, "Channels loaded: ${sportsChannels.size}")
