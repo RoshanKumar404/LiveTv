@@ -16,7 +16,7 @@ class RepoLink {
         try {
             val request = Request.Builder()
                 .url("https://iptv-org.github.io/iptv/index.m3u")
-                .header("User-Agent", "Mozilla/5.0") // Helps bypass some server blocks
+                .header("User-Agent", "Mozilla/5.0") //this helps to bypass some server blocks
                 .build()
 
             val response = client.newCall(request).execute()
@@ -31,7 +31,7 @@ class RepoLink {
                             it.name?.lowercase()?.contains("sport") == true
                 }
 
-                Log.d(TAG, "Channels loaded: ${sportsChannels.size}")
+//                Log.d(TAG, "Channels loaded: ${sportsChannels.size}")
                 return@withContext sportsChannels
             } ?: emptyList()
 

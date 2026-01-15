@@ -109,7 +109,7 @@ fun MainScreen(
         }
     }
 
-    // ROOT BOX: Critical for Fullscreen
+    // ROOT BOX = Critical thing for Fullscreen
     Box(modifier = Modifier.fillMaxSize().background(Color.Black)) {
 
         // 1. CONTENT LAYER (Search + List) - Hidden if Fullscreen
