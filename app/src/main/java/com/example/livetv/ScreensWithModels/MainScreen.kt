@@ -162,10 +162,10 @@ fun MainScreen(
             AndroidView(
                 factory = { ctx ->
                     PlayerView(ctx).apply {
-//                        this.player = viewModel.player
+                        this.player = viewModel.player
                         this.keepScreenOn = true
                         this.useController = true
-                        this.resizeMode = androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_FIT
+//                        this.resizeMode = androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_FIT
                     }
                 },
                 modifier = Modifier.fillMaxSize()
