@@ -2,6 +2,7 @@ package com.example.livetv.ScreensWithModels
 
 import android.app.Activity
 import android.content.pm.ActivityInfo
+import android.view.WindowManager
 import android.widget.Toast
 import androidx.annotation.OptIn
 import androidx.compose.foundation.background
@@ -51,6 +52,7 @@ fun MainScreen(
         } else null
     }
 
+    // Handle Orientation & System Bars
     LaunchedEffect(isFullscreen) {
         if (isFullscreen) {
             activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
@@ -62,16 +64,24 @@ fun MainScreen(
         }
     }
 
-    // Root Container
+    // Sync Player Loading State
+    DisposableEffect(viewModel.player) {
+        val listener = object : androidx.media3.common.Player.Listener {
+            override fun onPlaybackStateChanged(state: Int) {
+                isLoading = state == androidx.media3.common.Player.STATE_BUFFERING
+            }
+        }
+        viewModel.player.addListener(listener)
+        onDispose { viewModel.player.removeListener(listener) }
+    }
+
     Surface(modifier = Modifier.fillMaxSize(), color = Color.Black) {
         Box(modifier = Modifier.fillMaxSize()) {
 
-            // 1. LIST LAYER (Only visible if NOT fullscreen)
+            // 1. LIST LAYER (Only Portrait)
             if (!isFullscreen) {
                 Column(modifier = Modifier.fillMaxSize().background(Color.White)) {
-                    // This spacer keeps the list below the 250.dp player
                     Spacer(modifier = Modifier.height(250.dp))
-
                     OutlinedTextField(
                         value = searchQuery,
                         onValueChange = { searchQuery = it },
@@ -79,36 +89,28 @@ fun MainScreen(
                         placeholder = { Text("Search sports channels") },
                         singleLine = true
                     )
-
                     LazyColumn(modifier = Modifier.fillMaxWidth().weight(1f)) {
                         items(filteredChannels) { channel ->
-                            Text(
-                                text = channel.name,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clickable { viewModel.playChannel(channel.url) }
-                                    .padding(16.dp)
+                            ListItem(
+                                headlineContent = { Text(channel.name) },
+                                modifier = Modifier.clickable { viewModel.playChannel(channel.url) }
                             )
                         }
                     }
                 }
             }
 
-            // 2. PLAYER LAYER (Dynamic Size)
+            // 2. PLAYER LAYER (Dynamic size)
             Box(
-                modifier = if (isFullscreen) {
-                    Modifier.fillMaxSize().background(Color.Black)
-                } else {
-                    Modifier.fillMaxWidth().height(250.dp).background(Color.Black)
-                }
+                modifier = if (isFullscreen) Modifier.fillMaxSize()
+                else Modifier.fillMaxWidth().height(250.dp)
             ) {
                 AndroidView(
                     factory = { ctx ->
                         PlayerView(ctx).apply {
                             player = viewModel.player
                             useController = true
-                            // Important for sizing
-                            resizeMode = androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_FIT
+                            setBackgroundColor(android.graphics.Color.BLACK)
                         }
                     },
                     modifier = Modifier.fillMaxSize()
@@ -121,21 +123,22 @@ fun MainScreen(
                     )
                 }
 
-                // 🔥 FULLSCREEN BUTTON (Moved inside the specific Player Box)
+                // 🔥 THE FIX: High zIndex Surface with explicit onClick
                 Surface(
-                    color = Color.Black.copy(alpha = 0.6f),
-                    shape = MaterialTheme.shapes.small,
+                    onClick = { isFullscreen = !isFullscreen },
                     modifier = Modifier
                         .align(Alignment.TopEnd)
                         .padding(16.dp)
-                        .zIndex(5f) // High zIndex within the Box
+                        .zIndex(10f), // Forces it above the PlayerView's internal layers
+                    color = Color.Black.copy(alpha = 0.7f),
+                    shape = MaterialTheme.shapes.medium,
+                    enabled = true
                 ) {
                     Text(
-                        text = if (isFullscreen) "EXIT FULL" else "FULL SCREEN",
+                        text = if (isFullscreen) " EXIT FULL " else " FULL SCREEN ",
                         color = Color.White,
-                        modifier = Modifier
-                            .clickable { isFullscreen = !isFullscreen }
-                            .padding(horizontal = 12.dp, vertical = 8.dp)
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                        style = MaterialTheme.typography.labelLarge
                     )
                 }
             }
