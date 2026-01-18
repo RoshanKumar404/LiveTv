@@ -18,8 +18,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.compose.ui.zIndex
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.media3.common.util.Log
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.ui.PlayerView
 
@@ -31,7 +33,6 @@ fun MainScreen(
     val context = LocalContext.current
     val channels by viewModel.channels.collectAsStateWithLifecycle()
 
-    // UI States
     var isFullscreen by rememberSaveable { mutableStateOf(false) }
     var searchQuery by remember { mutableStateOf("") }
     var isLoading by remember { mutableStateOf(false) }
@@ -41,7 +42,6 @@ fun MainScreen(
         else channels.filter { it.name.contains(searchQuery, ignoreCase = true) }
     }
 
-    // Access Activity and Window to control orientation/UI
     val activity = context as? Activity
     val window = activity?.window
     val view = window?.decorView
@@ -51,8 +51,7 @@ fun MainScreen(
         } else null
     }
 
-    // Handle Orientation & System Bars
-    DisposableEffect(isFullscreen) {
+    LaunchedEffect(isFullscreen) {
         if (isFullscreen) {
             activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
             controller?.hide(androidx.core.view.WindowInsetsCompat.Type.systemBars())
@@ -61,39 +60,16 @@ fun MainScreen(
             activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
             controller?.show(androidx.core.view.WindowInsetsCompat.Type.systemBars())
         }
-
-        onDispose {
-            // When exiting the screen entirely, restore default behavior
-            activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
-            controller?.show(androidx.core.view.WindowInsetsCompat.Type.systemBars())
-        }
     }
 
-    // Sync Player State with UI (Loading/Errors)
-    DisposableEffect(viewModel.player) {
-        val listener = object : androidx.media3.common.Player.Listener {
-            override fun onPlaybackStateChanged(state: Int) {
-                isLoading = state == androidx.media3.common.Player.STATE_BUFFERING
-            }
-            override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
-                isLoading = false
-                Toast.makeText(context, "Stream Offline", Toast.LENGTH_SHORT).show()
-            }
-        }
-        viewModel.player.addListener(listener)
-        onDispose {
-            viewModel.player.removeListener(listener)
-        }
-    }
-
-    // Root layout using Surface for edge-to-edge black background
+    // Root Container
     Surface(modifier = Modifier.fillMaxSize(), color = Color.Black) {
         Box(modifier = Modifier.fillMaxSize()) {
 
-            // 1. LIST LAYER - Only visible in Portrait
+            // 1. LIST LAYER (Only visible if NOT fullscreen)
             if (!isFullscreen) {
                 Column(modifier = Modifier.fillMaxSize().background(Color.White)) {
-                    // Match the player's height to push list down
+                    // This spacer keeps the list below the 250.dp player
                     Spacer(modifier = Modifier.height(250.dp))
 
                     OutlinedTextField(
@@ -118,44 +94,48 @@ fun MainScreen(
                 }
             }
 
-            // 2. PLAYER LAYER - Stacks on top
+            // 2. PLAYER LAYER (Dynamic Size)
             Box(
                 modifier = if (isFullscreen) {
-                    Modifier.fillMaxSize()
+                    Modifier.fillMaxSize().background(Color.Black)
                 } else {
-                    Modifier.fillMaxWidth().height(250.dp)
-                },
-                contentAlignment = Alignment.Center
+                    Modifier.fillMaxWidth().height(250.dp).background(Color.Black)
+                }
             ) {
                 AndroidView(
                     factory = { ctx ->
                         PlayerView(ctx).apply {
-                            this.player = viewModel.player
-                            this.keepScreenOn = true
-                            this.useController = true
-                            this.resizeMode = androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_FIT
+                            player = viewModel.player
+                            useController = true
+                            // Important for sizing
+                            resizeMode = androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_FIT
                         }
                     },
                     modifier = Modifier.fillMaxSize()
                 )
 
                 if (isLoading) {
-                    CircularProgressIndicator(color = Color.Green)
+                    CircularProgressIndicator(
+                        modifier = Modifier.align(Alignment.Center),
+                        color = Color.Green
+                    )
                 }
 
-                // Fullscreen Toggle Button
-                Box(
+                // 🔥 FULLSCREEN BUTTON (Moved inside the specific Player Box)
+                Surface(
+                    color = Color.Black.copy(alpha = 0.6f),
+                    shape = MaterialTheme.shapes.small,
                     modifier = Modifier
                         .align(Alignment.TopEnd)
                         .padding(16.dp)
-                        .background(Color.Black.copy(alpha = 0.5f), shape = MaterialTheme.shapes.small)
-                        .clickable { isFullscreen = !isFullscreen }
-                        .padding(horizontal = 12.dp, vertical = 8.dp)
+                        .zIndex(5f) // High zIndex within the Box
                 ) {
                     Text(
                         text = if (isFullscreen) "EXIT FULL" else "FULL SCREEN",
                         color = Color.White,
-                        style = MaterialTheme.typography.labelLarge
+                        modifier = Modifier
+                            .clickable { isFullscreen = !isFullscreen }
+                            .padding(horizontal = 12.dp, vertical = 8.dp)
                     )
                 }
             }
