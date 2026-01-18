@@ -140,10 +140,8 @@ fun MainScreen(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .clickable {
-                                    isLoading = true
-                                    player.setMediaItem(MediaItem.fromUri(channel.url))
-                                    player.prepare()
-                                    player.play()
+                                    // Simply call the VM function
+                                    viewModel.playChannel(channel.url)
                                 }
                                 .padding(16.dp)
                         )
@@ -164,7 +162,7 @@ fun MainScreen(
             AndroidView(
                 factory = { ctx ->
                     PlayerView(ctx).apply {
-                        this.player = player
+//                        this.player = viewModel.player
                         this.keepScreenOn = true
                         this.useController = true
                         this.resizeMode = androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_FIT
