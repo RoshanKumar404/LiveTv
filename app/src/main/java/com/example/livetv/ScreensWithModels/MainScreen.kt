@@ -23,6 +23,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -50,7 +51,7 @@ fun MainScreen(
     val context = LocalContext.current
     val channels by viewModel.channels.collectAsStateWithLifecycle()
 //this too
-    var isFullscreen by remember { mutableStateOf(false) }
+    var isFullscreen by rememberSaveable { mutableStateOf(false) }
     var searchQuery by remember { mutableStateOf("") }
     var isLoading by remember { mutableStateOf(false) }
 
@@ -72,22 +73,28 @@ fun MainScreen(
     val activity = context as Activity
     val window = activity.window
     val view = activity.window.decorView
+    val controller = remember(window, view) {
+        androidx.core.view.WindowCompat.getInsetsController(window, view)
+    }
 
-    // Handle Orientation & System Bars
     DisposableEffect(isFullscreen) {
-        val windowInsetsController = androidx.core.view.WindowCompat.getInsetsController(window, view)
-// the full screen thing  is not working*********************
         if (isFullscreen) {
+            // Lock to Landscape
             activity.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
-            windowInsetsController.hide(androidx.core.view.WindowInsetsCompat.Type.systemBars())
+            // Hide both Status Bar and Navigation Bar
+            controller.hide(androidx.core.view.WindowInsetsCompat.Type.systemBars())
+            controller.systemBarsBehavior = androidx.core.view.WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
         } else {
+            // Lock to Portrait
             activity.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
-            windowInsetsController.show(androidx.core.view.WindowInsetsCompat.Type.systemBars())
+            // Show the bars back
+            controller.show(androidx.core.view.WindowInsetsCompat.Type.systemBars())
         }
 
         onDispose {
+            // Reset if the composable leaves the screen
             activity.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
-            windowInsetsController.show(androidx.core.view.WindowInsetsCompat.Type.systemBars())
+            controller.show(androidx.core.view.WindowInsetsCompat.Type.systemBars())
         }
     }
 
