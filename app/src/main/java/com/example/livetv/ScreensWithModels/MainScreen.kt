@@ -25,6 +25,8 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.media3.common.util.Log
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.ui.PlayerView
+import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
+import coil.compose.AsyncImage
 
 @OptIn(UnstableApi::class)
 @Composable
@@ -33,6 +35,8 @@ fun MainScreen(
 ) {
     val context = LocalContext.current
     val channels by viewModel.channels.collectAsStateWithLifecycle()
+    val categories by viewModel.categories.collectAsStateWithLifecycle()
+    val selectedCategory by viewModel.selectedCategory.collectAsStateWithLifecycle()
 
     var isFullscreen by rememberSaveable { mutableStateOf(false) }
     var searchQuery by remember { mutableStateOf("") }
@@ -82,19 +86,56 @@ fun MainScreen(
             if (!isFullscreen) {
                 Column(modifier = Modifier.fillMaxSize().background(Color.White)) {
                     Spacer(modifier = Modifier.height(250.dp))
+                    
+                    // Search Bar
                     OutlinedTextField(
                         value = searchQuery,
                         onValueChange = { searchQuery = it },
-                        modifier = Modifier.fillMaxWidth().padding(12.dp),
-                        placeholder = { Text("Search sports channels") },
+                        modifier = Modifier.fillMaxWidth().padding(8.dp),
+                        placeholder = { Text("Search channels") },
                         singleLine = true
                     )
+
+                    // Categories Tab Row
+                    if (categories.isNotEmpty()) {
+                        ScrollableTabRow(
+                            selectedTabIndex = categories.indexOf(selectedCategory).coerceAtLeast(0),
+                            edgePadding = 8.dp,
+                            containerColor = Color.Transparent,
+                            contentColor = MaterialTheme.colorScheme.primary,
+                            indicator = { tabPositions ->
+                                TabRowDefaults.Indicator(
+                                    modifier = Modifier.tabIndicatorOffset(tabPositions[categories.indexOf(selectedCategory).coerceAtLeast(0)])
+                                )
+                            }
+                        ) {
+                            categories.forEach { category ->
+                                Tab(
+                                    selected = selectedCategory == category,
+                                    onClick = { viewModel.selectCategory(category) },
+                                    text = { Text(text = category) }
+                                )
+                            }
+                        }
+                    }
+
+                    // Channel List
                     LazyColumn(modifier = Modifier.fillMaxWidth().weight(1f)) {
                         items(filteredChannels) { channel ->
                             ListItem(
                                 headlineContent = { Text(channel.name) },
+                                supportingContent = { channel.group?.let { Text(it, style=MaterialTheme.typography.labelSmall) } },
+                                leadingContent = {
+                                    AsyncImage(
+                                        model = channel.logo,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(50.dp).background(Color.LightGray),
+                                        error = null // maybe a placeholder?
+                                    )
+                                },
                                 modifier = Modifier.clickable { viewModel.playChannel(channel.url) }
                             )
+                            HorizontalDivider()
                         }
                     }
                 }
