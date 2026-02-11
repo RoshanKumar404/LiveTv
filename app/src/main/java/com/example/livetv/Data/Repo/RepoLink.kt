@@ -12,7 +12,7 @@ class RepoLink {
     private val client = OkHttpClient()
     private val TAG = "LiveLink_REPO"
 
-    suspend fun fetchSportsChannels(): List<Channel> = withContext(Dispatchers.IO) {
+    suspend fun fetchChannels(): List<Channel> = withContext(Dispatchers.IO) {
         try {
             val request = Request.Builder()
                 .url("https://iptv-org.github.io/iptv/index.m3u")
@@ -24,19 +24,7 @@ class RepoLink {
             // Use .use to automatically close the response body and prevent memory leaks
             response.body?.use { body ->
                 val content = body.string()
-                val allChannels = VideoParser.parse(content)
-
-                val sportsChannels = allChannels.filter {
-                    it.group?.lowercase()?.contains("sport") == true ||
-                            it.name?.lowercase()?.contains("sport") == true
-                }
-                val EnterTainmentChannels = allChannels.filter {
-                    it.group?.lowercase()?.contains("Entertainment") == true ||
-                            it.name?.lowercase()?.contains("entertainment") == true
-                }
-
-//                Log.d(TAG, "Channels loaded: ${sportsChannels.size}")
-                return@withContext sportsChannels
+                VideoParser.parse(content)
             } ?: emptyList()
 
         } catch (e: Exception) {

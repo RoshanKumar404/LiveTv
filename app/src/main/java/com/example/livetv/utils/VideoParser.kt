@@ -7,16 +7,19 @@ object VideoParser {
     fun parse(text: String):List<Channel>{
         val channels= mutableStateListOf<Channel>()
         var name=""
-        var group: String?=null
+        var group: String? = null
+        var logo: String? = null
         text.lines().forEach { line->
             when{
                 line.startsWith("#EXTINF")->{
                     name= line.substringAfter(",").trim()
                     group = Regex("""group-title="(.*?)"""")
                         .find(line)?.groupValues?.get(1)
+                    logo = Regex("""tvg-logo="(.*?)"""")
+                        .find(line)?.groupValues?.get(1)
                 }
                 line.startsWith("http")&& line.contains(".m3u8")->{
-                    channels.add(Channel(name,line,group))
+                    channels.add(Channel(name,line,group, logo))
                 }
             }
 
