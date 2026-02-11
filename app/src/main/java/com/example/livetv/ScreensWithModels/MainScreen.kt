@@ -47,7 +47,7 @@ fun MainScreen(
         else channels.filter { it.name.contains(searchQuery, ignoreCase = true) }
     }
 
-    val activity = context as? Activity
+    val activity = context.findActivity()
     val window = activity?.window
     val view = window?.decorView
     val controller = remember(window, view) {
@@ -57,12 +57,17 @@ fun MainScreen(
     }
 
     // Handle Orientation & System Bars
+    // Handle Orientation & System Bars
     LaunchedEffect(isFullscreen) {
+        android.util.Log.d("MainScreen", "isFullscreen changed from ${!isFullscreen} to $isFullscreen")
+
         if (isFullscreen) {
+            android.util.Log.d("MainScreen", "Attempting to set LANDSCAPE. Activity found: ${activity != null}")
             activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
             controller?.hide(androidx.core.view.WindowInsetsCompat.Type.systemBars())
             controller?.systemBarsBehavior = androidx.core.view.WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
         } else {
+            android.util.Log.d("MainScreen", "Attempting to set PORTRAIT")
             activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
             controller?.show(androidx.core.view.WindowInsetsCompat.Type.systemBars())
         }
@@ -166,7 +171,10 @@ fun MainScreen(
 
                 // 🔥 THE FIX: High zIndex Surface with explicit onClick
                 Surface(
-                    onClick = { isFullscreen = !isFullscreen },
+                    onClick = { 
+                        android.util.Log.d("MainScreen", "Fullscreen button CLICKED. Current state: $isFullscreen")
+                        isFullscreen = !isFullscreen 
+                    },
                     modifier = Modifier
                         .align(Alignment.TopEnd)
                         .padding(16.dp)
@@ -185,4 +193,10 @@ fun MainScreen(
             }
         }
     }
+}
+
+private tailrec fun android.content.Context.findActivity(): Activity? = when (this) {
+    is Activity -> this
+    is android.content.ContextWrapper -> baseContext.findActivity()
+    else -> null
 }
