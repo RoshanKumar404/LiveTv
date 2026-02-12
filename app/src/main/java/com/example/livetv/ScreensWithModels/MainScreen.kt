@@ -4,7 +4,11 @@ import android.app.Activity
 import android.content.pm.ActivityInfo
 import android.widget.Toast
 import androidx.annotation.OptIn
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -26,6 +30,7 @@ import androidx.media3.common.util.UnstableApi
 import androidx.media3.ui.PlayerView
 import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import coil.compose.AsyncImage
+import kotlinx.coroutines.delay
 
 @OptIn(UnstableApi::class)
 @Composable
@@ -36,10 +41,21 @@ fun MainScreen(
     val channels by viewModel.channels.collectAsStateWithLifecycle()
     val categories by viewModel.categories.collectAsStateWithLifecycle()
     val selectedCategory by viewModel.selectedCategory.collectAsStateWithLifecycle()
+    val currentChannel by viewModel.currentChannel.collectAsStateWithLifecycle()
 
     var isFullscreen by rememberSaveable { mutableStateOf(false) }
     var searchQuery by remember { mutableStateOf("") }
     var isLoading by remember { mutableStateOf(false) }
+    var showChannelName by remember { mutableStateOf(false) }
+
+    // Auto-hide channel name after 3 seconds
+    LaunchedEffect(currentChannel) {
+        if (currentChannel != null) {
+            showChannelName = true
+            delay(3000)
+            showChannelName = false
+        }
+    }
 
     val filteredChannels = remember(searchQuery, channels) {
         if (searchQuery.isBlank()) channels
@@ -129,18 +145,44 @@ fun MainScreen(
                     // Channel List
                     LazyColumn(modifier = Modifier.fillMaxWidth().weight(1f)) {
                         items(filteredChannels) { channel ->
+                            val isCurrentChannel = currentChannel?.url == channel.url
                             ListItem(
-                                headlineContent = { Text(channel.name) },
-                                supportingContent = { channel.group?.let { Text(it, style=MaterialTheme.typography.labelSmall) } },
+                                headlineContent = { 
+                                    Text(
+                                        text = channel.name,
+                                        color = if (isCurrentChannel) MaterialTheme.colorScheme.primary else Color.Unspecified,
+                                        style = if (isCurrentChannel) MaterialTheme.typography.titleMedium else MaterialTheme.typography.bodyLarge
+                                    )
+                                },
+                                supportingContent = { 
+                                    channel.group?.let { 
+                                        Text(
+                                            it, 
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = if (isCurrentChannel) MaterialTheme.colorScheme.primary else Color.Unspecified
+                                        )
+                                    } 
+                                },
                                 leadingContent = {
                                     AsyncImage(
                                         model = channel.logo,
                                         contentDescription = null,
-                                        modifier = Modifier.size(50.dp).background(Color.LightGray),
+                                        modifier = Modifier
+                                            .size(50.dp)
+                                            .background(Color.LightGray)
+                                            .then(
+                                                if (isCurrentChannel) Modifier.border(2.dp, MaterialTheme.colorScheme.primary)
+                                                else Modifier
+                                            ),
                                         error = null // maybe a placeholder?
                                     )
                                 },
-                                modifier = Modifier.clickable { viewModel.playChannel(channel.url) }
+                                modifier = Modifier
+                                    .clickable { viewModel.playChannel(channel) }
+                                    .background(
+                                        if (isCurrentChannel) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
+                                        else Color.Transparent
+                                    )
                             )
                             HorizontalDivider()
                         }
@@ -163,6 +205,39 @@ fun MainScreen(
                     },
                     modifier = Modifier.fillMaxSize()
                 )
+
+                // Channel Name Overlay
+                AnimatedVisibility(
+                    visible = showChannelName && currentChannel != null,
+                    enter = fadeIn(),
+                    exit = fadeOut(),
+                    modifier = Modifier.align(Alignment.BottomStart)
+                ) {
+                    Surface(
+                        modifier = Modifier
+                            .padding(16.dp)
+                            .wrapContentWidth(),
+                        color = Color.Black.copy(alpha = 0.7f),
+                        shape = MaterialTheme.shapes.medium
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
+                        ) {
+                            Text(
+                                text = currentChannel?.name ?: "",
+                                color = Color.White,
+                                style = MaterialTheme.typography.titleLarge
+                            )
+                            currentChannel?.group?.let { group ->
+                                Text(
+                                    text = group,
+                                    color = Color.White.copy(alpha = 0.7f),
+                                    style = MaterialTheme.typography.bodySmall
+                                )
+                            }
+                        }
+                    }
+                }
 
                 if (isLoading) {
                     CircularProgressIndicator(

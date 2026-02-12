@@ -27,9 +27,11 @@ class MainviewModel(application: Application) : AndroidViewModel(application) {
     // 1. Channel List State
     private val _allChannels = MutableStateFlow<List<Channel>>(emptyList())
     private val _selectedCategory = MutableStateFlow("All")
+    private val _currentChannel = MutableStateFlow<Channel?>(null)
     
     val categories = MutableStateFlow<List<String>>(listOf("All"))
     val selectedCategory = _selectedCategory.asStateFlow()
+    val currentChannel = _currentChannel.asStateFlow()
 
     val channels = combine(_allChannels, _selectedCategory) { channels, category ->
         if (category == "All") channels
@@ -71,8 +73,9 @@ class MainviewModel(application: Application) : AndroidViewModel(application) {
     }
 
     // 3. Helper function to play a channel
-    fun playChannel(url: String) {
-        val mediaItem = MediaItem.fromUri(url)
+    fun playChannel(channel: Channel) {
+        _currentChannel.value = channel
+        val mediaItem = MediaItem.fromUri(channel.url)
         player.setMediaItem(mediaItem)
         player.prepare()
         player.play()
