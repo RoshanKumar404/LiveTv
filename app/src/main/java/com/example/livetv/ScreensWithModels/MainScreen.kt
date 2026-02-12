@@ -2,7 +2,6 @@ package com.example.livetv.ScreensWithModels
 
 import android.app.Activity
 import android.content.pm.ActivityInfo
-import android.view.WindowManager
 import android.widget.Toast
 import androidx.annotation.OptIn
 import androidx.compose.foundation.background
@@ -57,18 +56,21 @@ fun MainScreen(
     }
 
     // Handle Orientation & System Bars
-    // Handle Orientation & System Bars
     LaunchedEffect(isFullscreen) {
         android.util.Log.d("MainScreen", "isFullscreen changed from ${!isFullscreen} to $isFullscreen")
 
         if (isFullscreen) {
             android.util.Log.d("MainScreen", "Attempting to set LANDSCAPE. Activity found: ${activity != null}")
             activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
+            
+            // Use modern WindowInsetsController for maximum compatibility
             controller?.hide(androidx.core.view.WindowInsetsCompat.Type.systemBars())
             controller?.systemBarsBehavior = androidx.core.view.WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
         } else {
             android.util.Log.d("MainScreen", "Attempting to set PORTRAIT")
             activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+            
+            // Show system bars
             controller?.show(androidx.core.view.WindowInsetsCompat.Type.systemBars())
         }
     }
@@ -109,7 +111,7 @@ fun MainScreen(
                             containerColor = Color.Transparent,
                             contentColor = MaterialTheme.colorScheme.primary,
                             indicator = { tabPositions ->
-                                TabRowDefaults.Indicator(
+                                TabRowDefaults.SecondaryIndicator(
                                     modifier = Modifier.tabIndicatorOffset(tabPositions[categories.indexOf(selectedCategory).coerceAtLeast(0)])
                                 )
                             }
@@ -168,28 +170,41 @@ fun MainScreen(
                         color = Color.Green
                     )
                 }
+            }
 
-                // 🔥 THE FIX: High zIndex Surface with explicit onClick
-                Surface(
-                    onClick = { 
-                        android.util.Log.d("MainScreen", "Fullscreen button CLICKED. Current state: $isFullscreen")
-                        isFullscreen = !isFullscreen 
-                    },
-                    modifier = Modifier
-                        .align(Alignment.TopEnd)
-                        .padding(16.dp)
-                        .zIndex(10f), // Forces it above the PlayerView's internal layers
-                    color = Color.Black.copy(alpha = 0.7f),
-                    shape = MaterialTheme.shapes.medium,
-                    enabled = true
-                ) {
-                    Text(
-                        text = if (isFullscreen) " EXIT FULL " else " FULL SCREEN ",
-                        color = Color.White,
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-                        style = MaterialTheme.typography.labelLarge
+            // 3. FULLSCREEN BUTTON LAYER - SEPARATE from PlayerView to receive clicks
+            Box(
+                modifier = Modifier
+                    .align(if (isFullscreen) Alignment.TopEnd else Alignment.TopEnd)
+                    .padding(16.dp)
+                    .zIndex(Float.MAX_VALUE) // Maximum Z-index to ensure it's on top
+                    .background(
+                        color = Color(0xFF2196F3), // Bright blue to make it visible
+                        shape = MaterialTheme.shapes.medium
                     )
-                }
+                    .clickable {
+                        android.util.Log.e("MainScreen", " BUTTON CLICKED! ")
+                        android.util.Log.d("MainScreen", "Current isFullscreen: $isFullscreen")
+                        android.util.Log.d("MainScreen", "Will change to: ${!isFullscreen}")
+                        
+                        Toast.makeText(
+                            context, 
+                            "Button Clicked! Fullscreen}",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                        
+                        isFullscreen = !isFullscreen
+                        
+                        android.util.Log.d("MainScreen", "After toggle, isFullscreen: $isFullscreen")
+                    }
+                    .padding(horizontal = 16.dp, vertical = 12.dp)
+            ) {
+                Text(
+                    text = if (isFullscreen) "EXIT FULL" else "FULL SCREEN",
+                    color = Color.White,
+                    style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier.align(Alignment.Center)
+                )
             }
         }
     }

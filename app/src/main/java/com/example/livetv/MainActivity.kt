@@ -18,7 +18,7 @@ import com.example.livetv.ui.theme.LiveTvTheme
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
+        // Remove it as its the main culprit enableEdgeToEdge() - it interferes with fullscreen mode
         setContent {
 //            LiveTvTheme {
 //                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
